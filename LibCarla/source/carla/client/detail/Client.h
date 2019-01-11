@@ -102,6 +102,22 @@ namespace detail {
         const rpc::Actor &vehicle,
         const rpc::VehicleControl &control);
 
+    void SetActorVelocity(
+        const rpc::Actor &actor,
+        const geom::Vector3D &vector);
+
+    void SetActorAngularVelocity(
+        const rpc::Actor &actor,
+        const geom::Vector3D &vector);
+
+    void AddActorForce(
+        const rpc::Actor &actor,
+        const geom::Vector3D &vector);
+
+    void AddActorImpulse(
+        const rpc::Actor &actor,
+        const geom::Vector3D &vector);
+
     void SubscribeToStream(
         const streaming::Token &token,
         std::function<void(Buffer)> callback);
