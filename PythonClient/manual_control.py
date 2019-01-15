@@ -150,11 +150,14 @@ class CarlaGame(object):
         self._map_view = self._map.get_map(WINDOW_HEIGHT) if self._city_name is not None else None
         self._position = None
         self._agent_positions = None
+        self.my_joystick = None
+        self.joystick_names = []
 
     def execute(self):
         """Launch the PyGame."""
         pygame.init()
         self._initialize_game()
+        self._initialize_joystick()
         try:
             while True:
                 for event in pygame.event.get():
@@ -174,9 +177,25 @@ class CarlaGame(object):
             self._display = pygame.display.set_mode(
                 (WINDOW_WIDTH, WINDOW_HEIGHT),
                 pygame.HWSURFACE | pygame.DOUBLEBUF)
+        pygame.display.set_mode((1, 1))
 
         logging.debug('pygame started')
         self._on_new_episode()
+
+    def _initialize_joystick(self):
+        if(self.my_joystick!=None):
+            return
+        # Set up the joystick
+        pygame.joystick.init()
+
+        # Enumerate joysticks
+        for i in range(0, pygame.joystick.get_count()):
+            self.joystick_names.append(pygame.joystick.Joystick(i).get_name())
+
+        # By default, load the first available joystick.
+        if (len(self.joystick_names) > 0):
+            self.my_joystick = pygame.joystick.Joystick(0)
+            self.my_joystick.init()
 
     def _on_new_episode(self):
         self._carla_settings.randomize_seeds()
@@ -225,6 +244,7 @@ class CarlaGame(object):
             self._timer.lap()
 
         control = self._get_keyboard_control(pygame.key.get_pressed())
+        control = self._get_joypad_control()
         # Set the player position
         if self._city_name is not None:
             self._position = self._map.convert_to_pixel([
@@ -264,6 +284,47 @@ class CarlaGame(object):
             self._enable_autopilot = not self._enable_autopilot
         control.reverse = self._is_on_reverse
         return control
+
+
+    def _get_joypad_control(self):
+        """
+        Return a VehicleControl message based on the pressed keys. Return None
+        if a new episode was requested.
+        """
+        control = VehicleControl()
+        # left axis button
+        if (self.my_joystick.get_axis(0)<0):
+            print("Joystick: Turn left")
+            control.steer = -1.0
+        # right axis button
+        if (self.my_joystick.get_axis(0)>0):
+            print("Joystick: Turn right")
+            control.steer = 1.0
+        # X button
+        if (self.my_joystick.get_button(0)):
+            print("Joystick: Break (X)")
+            control.brake = 1.0
+        # A button or UP axis
+        if (self.my_joystick.get_button(1)):
+            print("Joystick: Accelerate (A)")
+            control.throttle = 1.0
+        # start button
+        if (self.my_joystick.get_button(9)):
+            print("Joystick: Hand brake (Start)")
+            control.hand_brake = True        
+        # select button
+        if (self.my_joystick.get_button(8)):
+            print("Joystick: Autopilot (Select)")
+            self._enable_autopilot = not self._enable_autopilot
+        # R button
+        if (self.my_joystick.get_button(5)):
+            print("Joystick: Reverse (R button)")
+            self._is_on_reverse = not self._is_on_reverse
+
+        control.reverse = self._is_on_reverse
+        return control
+
+
 
     def _print_player_measurements_map(
             self,
